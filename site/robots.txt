@@ -1,4 +1,5 @@
 ﻿User-agent: *
 Allow: /
-Sitemap: https://merelyer.github.io/aitoolpilot/sitemap.xml
+Sitemap: https://aitoolpilot.pages.dev/sitemap.xml
+
 

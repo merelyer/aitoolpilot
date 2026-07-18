@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SITE_URL = "https://merelyer.github.io/aitoolpilot"
+SITE_URL = "https://aitoolpilot.pages.dev"
 
 
 class SiteQualityTests(unittest.TestCase):
@@ -14,20 +14,21 @@ class SiteQualityTests(unittest.TestCase):
         self.assertTrue((ROOT / "site" / "privacy" / "index.html").exists())
         self.assertTrue((ROOT / "site" / "affiliate-disclosure" / "index.html").exists())
 
-    def test_seo_files_use_current_github_pages_url(self):
+    def test_seo_files_use_current_cloudflare_pages_url(self):
         sitemap = (ROOT / "site" / "sitemap.xml").read_text(encoding="utf-8")
         robots = (ROOT / "site" / "robots.txt").read_text(encoding="utf-8")
         self.assertIn(f"{SITE_URL}/sitemap.xml", robots)
         self.assertIn(f"{SITE_URL}/", sitemap)
         self.assertNotIn("https://aitoolpilot.com", sitemap)
         self.assertNotIn("https://aitoolpilot.com", robots)
+        self.assertNotIn("https://merelyer.github.io/aitoolpilot", sitemap)
+        self.assertNotIn("https://merelyer.github.io/aitoolpilot", robots)
 
-    def test_homepage_links_stay_under_github_pages_project_path(self):
+    def test_homepage_links_use_root_paths_for_cloudflare_pages(self):
         homepage = (ROOT / "site" / "index.html").read_text(encoding="utf-8")
-        self.assertIn('href="/aitoolpilot/privacy/"', homepage)
-        self.assertIn('href="/aitoolpilot/affiliate-disclosure/"', homepage)
-        self.assertNotIn('href="/privacy/"', homepage)
-        self.assertNotIn('href="/affiliate-disclosure/"', homepage)
+        self.assertIn('href="/privacy/"', homepage)
+        self.assertIn('href="/affiliate-disclosure/"', homepage)
+        self.assertNotIn('href="/aitoolpilot/', homepage)
 
     def test_run_status_survives_windows_default_encoding(self):
         env = os.environ.copy()

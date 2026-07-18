@@ -28,7 +28,7 @@ class DeployEngine:
         with open(config_path, "r", encoding="utf-8") as f:
             return json.load(f)
 
-    def deploy_cloudflare_pages(self, project_name: str = "ai-tool-pilot") -> bool:
+    def deploy_cloudflare_pages(self, project_name: str = "aitoolpilot") -> bool:
         """Deploy to Cloudflare Pages using Wrangler CLI."""
         print("\n☁️  Deploying to Cloudflare Pages...")
 
