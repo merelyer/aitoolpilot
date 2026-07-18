@@ -22,12 +22,12 @@ echo "[2/5] Installing Python packages..."
 pip install -r requirements.txt
 echo "      OK"
 
-# 3. Check for Anthropic API key
-echo "[3/5] Checking Anthropic API key..."
-if [ -z "$ANTHROPIC_API_KEY" ]; then
-    echo "      WARNING: ANTHROPIC_API_KEY not set!"
-    echo "      Set it with: export ANTHROPIC_API_KEY=sk-ant-..."
-    echo "      Get a key at: https://console.anthropic.com/"
+# 3. Check for DeepSeek API key
+echo "[3/5] Checking DeepSeek API key..."
+if [ -z "$DEEPSEEK_API_KEY" ]; then
+    echo "      WARNING: DEEPSEEK_API_KEY not set!"
+    echo "      Set it with: export DEEPSEEK_API_KEY=sk-..."
+    echo "      Get a key at: https://platform.deepseek.com/"
     echo ""
     echo "      The system will work in fallback mode without it,"
     echo "      but content quality will be lower."
@@ -51,7 +51,7 @@ echo "  ✅ Setup Complete!"
 echo "========================================="
 echo ""
 echo "  Next steps:"
-echo "  1. Set your ANTHROPIC_API_KEY"
+echo "  1. Set your DEEPSEEK_API_KEY"
 echo "  2. Add your affiliate links in data/posts/*.json"
 echo "  3. Deploy: python run.py --deploy"
 echo "  4. Schedule: python run.py --schedule"

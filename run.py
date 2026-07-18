@@ -2,16 +2,16 @@
 """
 AI Income Automation - Main Runner
 ===================================
-Fully automated Claude-powered revenue engine.
+Fully automated DeepSeek-powered revenue engine.
 
 This single script orchestrates:
-1. Content research & generation (via Claude API)
+1. Content research & generation (via DeepSeek API)
 2. Static site building with SEO optimization
 3. Deployment to free hosting (Cloudflare Pages)
 4. Scheduled recurring runs
 
 QUICK START:
-    export ANTHROPIC_API_KEY=sk-ant-...
+    export DEEPSEEK_API_KEY=sk-...
     python run.py --once          # Generate & deploy once
     python run.py --daemon        # Run continuously every N hours
     python run.py --schedule      # Set up as cron job
@@ -22,7 +22,7 @@ REVENUE MODEL:
     - Sponsored posts once domain authority builds
 
 COST STRUCTURE:
-    - Claude Haiku 3.5: ~$0.02-0.05 per post
+    - DeepSeek API: low-cost per generated post
     - Cloudflare Pages: Free tier
     - Domain (optional): ~$10/year
     - Total monthly cost with daily posts: ~$1-3
@@ -41,6 +41,10 @@ import argparse
 from pathlib import Path
 from datetime import datetime
 
+for stream in (sys.stdout, sys.stderr):
+    if hasattr(stream, "reconfigure"):
+        stream.reconfigure(errors="replace")
+
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
@@ -49,7 +53,7 @@ def check_environment() -> dict:
     """Check if the environment is properly set up."""
     status = {
         "python": True,
-        "anthropic_key": bool(os.environ.get("ANTHROPIC_API_KEY")),
+        "deepseek_key": bool(os.environ.get("DEEPSEEK_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")),
         "git": False,
         "node": False,
         "wrangler": False,
@@ -75,7 +79,7 @@ def print_banner():
 ║     ██║  ██║╚███╔███╔╝██║ ╚████║╚██████╗╚██████╔╝██║ ╚═╝ ██║███████╗
 ║     ╚═╝  ╚═╝ ╚══╝╚══╝ ╚═╝  ╚═══╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝
 ║                                                              ║
-║         🤖  Fully Automated Claude-Powered Revenue Engine  🤖║
+║        🤖  Fully Automated DeepSeek-Powered Revenue Engine 🤖║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
 """)
@@ -138,7 +142,7 @@ def setup_cron():
 
 def main():
     parser = argparse.ArgumentParser(
-        description="AI Income Automation - Fully automated Claude-powered revenue engine",
+        description="AI Income Automation - Fully automated DeepSeek-powered revenue engine",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -167,7 +171,7 @@ Examples:
         for k, v in status.items():
             icon = "✅" if v else "❌"
             print(f"  {icon} {k}: {v}")
-        print(f"\n💡 Set ANTHROPIC_API_KEY to enable Claude content generation.")
+        print(f"\n💡 Set DEEPSEEK_API_KEY to enable DeepSeek content generation.")
         print(f"💡 Install wrangler (npm i -g wrangler) for Cloudflare deployment.")
         return
 

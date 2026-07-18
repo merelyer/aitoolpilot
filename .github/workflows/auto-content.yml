@@ -4,7 +4,7 @@ on:
     - cron: '15 */8 * * *'
   workflow_dispatch:
 env:
-  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
 permissions:
   contents: write
   pages: write

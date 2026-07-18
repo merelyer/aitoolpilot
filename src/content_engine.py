@@ -38,6 +38,8 @@ class ContentEngine:
             self.config = json.load(f)
 
         self.site_name = self.config["site"]["name"]
+        self.site_url = self.config["site"].get("url", f"https://{self.config['site']['domain']}").rstrip("/")
+        self.base_path = self.config["site"].get("base_path", "").rstrip("/")
         self.model = self.config["claude"]["model"]
         self.max_tokens = self.config["claude"]["max_tokens_per_post"]
         self.temperature = self.config["claude"]["temperature"]
@@ -55,6 +57,12 @@ class ContentEngine:
         for sub in ["posts", "topics", "analytics"]:
             (ROOT / "data" / sub).mkdir(parents=True, exist_ok=True)
         (ROOT / "logs").mkdir(parents=True, exist_ok=True)
+
+    def _apply_site_urls(self, html: str) -> str:
+        html = html.replace("https://aitoolpilot.com", self.site_url)
+        if self.base_path:
+            html = html.replace('href="/', f'href="{self.base_path}/')
+        return html
 
     def _call_api(self, system_prompt: str, user_prompt: str, max_tokens: int = None, temperature: float = None) -> str:
         """Call DeepSeek API with OpenAI-compatible format."""
@@ -343,18 +351,19 @@ Return as JSON with content_html containing the full article HTML."""
             post_dir = site_dir / slug
             post_dir.mkdir(parents=True, exist_ok=True)
             with open(post_dir / "index.html", "w", encoding="utf-8") as f:
-                f.write(page)
+                f.write(self._apply_site_urls(page))
 
         with open(site_dir / "index.html", "w", encoding="utf-8") as f:
-            f.write(self._build_homepage(posts))
+            f.write(self._apply_site_urls(self._build_homepage(posts)))
 
         for cat in set(p.get("category", "uncategorized") for p in posts):
             cat_dir = site_dir / cat
             cat_dir.mkdir(parents=True, exist_ok=True)
             cat_posts = [p for p in posts if p.get("category") == cat]
             with open(cat_dir / "index.html", "w", encoding="utf-8") as f:
-                f.write(self._build_category_page(cat, cat_posts))
+                f.write(self._apply_site_urls(self._build_category_page(cat, cat_posts)))
 
+        self._write_legal_pages()
         self._write_seo_files(posts)
         return str(site_dir)
 
@@ -386,13 +395,31 @@ Return as JSON with content_html containing the full article HTML."""
         cat_title = category.replace("-", " ").title()
         return f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Best {cat_title} Reviews | {self.site_name}</title><meta name="description" content="Expert reviews and comparisons of the best {cat_title.lower()} tools. Honest ratings, pricing comparisons, and buying guides."><meta name="robots" content="index,follow"><style>:root{{--bg:#fff;--text:#1a1a2e;--accent:#6c63ff;--border:#e0e0e0;--card:#f8f9fa}}*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:system-ui,-apple-system,sans-serif;line-height:1.8;color:var(--text);background:var(--bg);max-width:800px;margin:0 auto;padding:20px}}header{{padding:20px 0;border-bottom:2px solid var(--accent);margin-bottom:30px}}header a{{text-decoration:none}}header h1{{font-size:1.5em;color:var(--accent)}}h2{{margin:25px 0 15px}}.meta{{color:#888;font-size:.9em}}a{{color:var(--accent);text-decoration:none;font-weight:600}}a:hover{{text-decoration:underline}}footer{{margin-top:40px;padding:20px 0;border-top:1px solid var(--border);text-align:center;font-size:.9em;color:#888}}</style></head><body><header><a href="/"><h1>🤖 {self.site_name}</h1></a></header><main><h2>📂 {cat_title}</h2><p>Expert reviews and comparisons of the best {cat_title.lower()} tools available today. We test each tool hands-on and provide honest, detailed reviews to help you choose.</p>{cards}</main><footer><p>&copy; 2025 {self.site_name}.</p></footer></body></html>"""
 
+    def _legal_page(self, title: str, body: str) -> str:
+        return self._apply_site_urls(f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>{title} | {self.site_name}</title><meta name="description" content="{title} for {self.site_name}."><meta name="robots" content="index,follow"><style>:root{{--bg:#fff;--text:#1a1a2e;--accent:#6c63ff;--border:#e0e0e0;--card:#f8f9fa}}*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:system-ui,-apple-system,sans-serif;line-height:1.8;color:var(--text);background:var(--bg);max-width:800px;margin:0 auto;padding:20px}}header{{padding:20px 0;border-bottom:2px solid var(--accent);margin-bottom:30px}}header a{{text-decoration:none}}header h1{{font-size:1.5em;color:var(--accent)}}h2{{margin:28px 0 12px;color:#16213e}}p,li{{margin-bottom:12px}}a{{color:var(--accent)}}footer{{margin-top:40px;padding:20px 0;border-top:1px solid var(--border);font-size:.9em;color:#666}}</style></head><body><header><a href="/"><h1>{self.site_name}</h1></a></header><main><h1>{title}</h1><p><strong>Effective date:</strong> July 18, 2026</p>{body}</main><footer><p>&copy; 2026 {self.site_name}. <a href="/privacy/">Privacy</a> | <a href="/affiliate-disclosure/">Affiliate Disclosure</a> | <a href="/sitemap.xml">Sitemap</a></p></footer></body></html>""")
+
+    def _write_legal_pages(self):
+        privacy_body = """<h2>Information We Collect</h2><p>AIToolPilot is a static content website. We may receive basic technical information from hosting, analytics, affiliate, or advertising providers, such as page views, referrers, device type, and approximate location.</p><h2>How We Use Information</h2><p>We use this information to understand which pages are useful, improve the site, prevent abuse, and measure affiliate or advertising performance.</p><h2>Affiliate and Advertising Partners</h2><p>Some links may send you to third-party websites. Those services have their own privacy policies, cookies, and tracking practices. We do not control their systems.</p><h2>Contact</h2><p>For privacy questions, contact the site owner through the GitHub profile associated with this project.</p>"""
+        disclosure_body = """<h2>Affiliate Links</h2><p>AIToolPilot may include affiliate links to software tools and services. If you click one of these links and make a purchase, we may earn a commission at no additional cost to you.</p><h2>Editorial Approach</h2><p>Affiliate relationships do not guarantee a recommendation. Reviews and comparisons should describe practical use cases, pricing, strengths, and limitations so readers can make their own decisions.</p><h2>Sponsored Content</h2><p>If a post is sponsored or paid for directly, it should be clearly labeled as sponsored content.</p><h2>Your Choice</h2><p>You are never required to use an affiliate link. You can visit each vendor directly if you prefer.</p>"""
+
+        pages = {
+            "privacy": self._legal_page("Privacy Policy", privacy_body),
+            "affiliate-disclosure": self._legal_page("Affiliate Disclosure", disclosure_body),
+        }
+        for slug, html in pages.items():
+            page_dir = ROOT / "site" / slug
+            page_dir.mkdir(parents=True, exist_ok=True)
+            (page_dir / "index.html").write_text(html, encoding="utf-8")
+
     def _write_seo_files(self, posts: list):
         urls = ""
         for p in posts:
-            urls += f"  <url><loc>https://aitoolpilot.com/{p.get('slug','')}/</loc><lastmod>{p.get('generated_at','')[:10]}</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>\n"
-        sitemap = f"""<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://aitoolpilot.com/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>{urls}</urlset>"""
+            urls += f"  <url><loc>{self.site_url}/{p.get('slug','')}/</loc><lastmod>{p.get('generated_at','')[:10]}</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>\n"
+        urls += f"  <url><loc>{self.site_url}/privacy/</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>\n"
+        urls += f"  <url><loc>{self.site_url}/affiliate-disclosure/</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>\n"
+        sitemap = f"""<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>{self.site_url}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>{urls}</urlset>"""
         (ROOT / "site" / "sitemap.xml").write_text(sitemap, encoding="utf-8")
-        (ROOT / "site" / "robots.txt").write_text("User-agent: *\nAllow: /\nSitemap: https://aitoolpilot.com/sitemap.xml\n")
+        (ROOT / "site" / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {self.site_url}/sitemap.xml\n")
 
     def run_auto(self, category: str = None) -> list:
         print(f"\n{'='*60}\n🚀 AI Income Automation - Content Engine\n   API: DeepSeek ({self.model})\n   Time: {datetime.now().isoformat()}\n{'='*60}\n")
