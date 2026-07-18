@@ -1,6 +1,3 @@
-﻿User-agent: *
+User-agent: *
 Allow: /
 Sitemap: https://merelyer.github.io/aitoolpilot/sitemap.xml
-
-
-
