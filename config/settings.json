@@ -7,9 +7,9 @@
   "site": {
     "name": "AIToolPilot",
     "tagline": "Discover the Best AI Tools for Every Task",
-    "domain": "aitoolpilot.pages.dev",
-    "url": "https://aitoolpilot.pages.dev",
-    "base_path": "",
+    "domain": "merelyer.github.io",
+    "url": "https://merelyer.github.io/aitoolpilot",
+    "base_path": "/aitoolpilot",
     "language": "en",
     "posts_per_run": 3,
     "max_posts_total": 500
