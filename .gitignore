@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Data (regenerated automatically)
+data/posts/*
+data/topics/*
+data/analytics/*
+data/scheduler_state.json
+
+# Logs
+logs/*
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Keep data directories
+!data/posts/.gitkeep
+!data/topics/.gitkeep
+!data/analytics/.gitkeep
+!logs/.gitkeep

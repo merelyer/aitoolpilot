@@ -1,0 +1,66 @@
+{
+  "project": {
+    "name": "AI Income Automation",
+    "version": "1.0.0",
+    "description": "Fully automated Claude-powered affiliate content site that researches, writes, publishes, and monetizes — zero human touch required"
+  },
+  "site": {
+    "name": "AIToolPilot",
+    "tagline": "Discover the Best AI Tools for Every Task",
+    "domain": "aitoolpilot.com",
+    "language": "en",
+    "posts_per_run": 3,
+    "max_posts_total": 500
+  },
+  "claude": {
+    "model": "deepseek-chat",
+    "max_tokens_per_post": 4000,
+    "temperature": 0.7,
+    "max_cost_per_run_usd": 0.10
+  },
+  "affiliate": {
+    "programs": [
+      {
+        "name": "PartnerStack",
+        "base_url": "https://partnerstack.com",
+        "commission": "20-30% recurring"
+      },
+      {
+        "name": "Impact",
+        "base_url": "https://impact.com",
+        "commission": "varies"
+      },
+      {
+        "name": "Pipedrive",
+        "base_url": "https://pipedrive.com",
+        "commission": "33% for 12 months"
+      }
+    ]
+  },
+  "seo": {
+    "keywords_per_post": 5,
+    "target_word_count": 1500,
+    "internal_links_per_post": 3,
+    "categories": [
+      "ai-writing-tools",
+      "ai-image-generators",
+      "ai-code-assistants",
+      "ai-marketing-tools",
+      "ai-productivity-tools",
+      "ai-data-analysis",
+      "ai-customer-service",
+      "ai-video-editing"
+    ]
+  },
+  "schedule": {
+    "frequency_hours": 8,
+    "publish_time_utc": "09:00",
+    "social_auto_post": true
+  },
+  "monetization": {
+    "primary": "affiliate",
+    "secondary": ["adsense", "sponsored_posts"],
+    "affiliate_networks": ["partnerstack", "impact", "shareasale", "cj"],
+    "ad_network": "adsense"
+  }
+}

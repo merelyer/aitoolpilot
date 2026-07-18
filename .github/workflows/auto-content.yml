@@ -1,0 +1,30 @@
+name: Auto Content Engine
+on:
+  schedule:
+    - cron: '15 */8 * * *'
+  workflow_dispatch:
+env:
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install anthropic
+      - run: python run.py --once
+      - run: |
+          git config user.name "AI Bot"
+          git config user.email "bot@aitoolpilot.com"
+          git add site/ data/
+          git diff --staged --quiet || git commit -m "Auto content $(date +%Y-%m-%d)"
+          git push
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: 'site' }
+      - uses: actions/deploy-pages@v4
