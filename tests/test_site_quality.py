@@ -1,8 +1,12 @@
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+
+from src.content_engine import ContentEngine
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -49,6 +53,25 @@ class SiteQualityTests(unittest.TestCase):
         workflow = (ROOT / ".github" / "workflows" / "auto-content.yml").read_text(encoding="utf-8")
         self.assertIn("DEEPSEEK_API_KEY", workflow)
         self.assertNotIn("ANTHROPIC_API_KEY", workflow)
+
+    def test_save_post_sanitizes_path_separator_in_slug(self):
+        settings_path = ROOT / "config" / "settings.json"
+        post = {
+            "title": "Top 5 AI Video Editors Under $20/Month: 2025 Pricing Guide",
+            "slug": "top-5-ai-video-editors-under-$20/month-2025-pricing-guide",
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            with patch("src.content_engine.ROOT", temp_root):
+                engine = ContentEngine(config_path=settings_path)
+                saved_path = engine.save_post(post)
+
+            self.assertEqual(
+                saved_path,
+                temp_root / "data" / "posts" / "top-5-ai-video-editors-under-20-month-2025-pricing-guide.json",
+            )
+            self.assertTrue(saved_path.is_file())
 
 
 if __name__ == "__main__":

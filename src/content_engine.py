@@ -11,6 +11,7 @@ Compatible with OpenAI SDK, just change base_url.
 import os
 import sys
 import json
+import re
 import time
 import random
 from datetime import datetime, timezone
@@ -57,6 +58,12 @@ class ContentEngine:
         for sub in ["posts", "topics", "analytics"]:
             (ROOT / "data" / sub).mkdir(parents=True, exist_ok=True)
         (ROOT / "logs").mkdir(parents=True, exist_ok=True)
+
+    @staticmethod
+    def _normalize_slug(slug: str) -> str:
+        """Return a filesystem-safe, URL-friendly slug."""
+        normalized = re.sub(r"[^a-z0-9]+", "-", str(slug or "").lower())
+        return normalized.strip("-")[:80].rstrip("-")
 
     def _apply_site_urls(self, html: str) -> str:
         html = html.replace("https://aitoolpilot.com", self.site_url)
@@ -224,6 +231,7 @@ Return as JSON with content_html containing the full article HTML."""
             end = text.rfind("}") + 1
             if start >= 0 and end > start:
                 post = json.loads(text[start:end])
+                post["slug"] = self._normalize_slug(post.get("slug") or title)
                 post["generated_at"] = datetime.now(timezone.utc).isoformat()
                 post["model"] = self.model
                 post["topic"] = topic
@@ -235,7 +243,7 @@ Return as JSON with content_html containing the full article HTML."""
     def _fallback_post(self, topic: dict, category: str) -> dict:
         title = topic.get("title", "Best AI Tools Comparison")
         keyword = topic.get("keyword", "ai tools")
-        slug = title.lower().replace(" ", "-").replace("?", "").replace(":", "").replace("&", "and")[:80]
+        slug = self._normalize_slug(title)
 
         return {
             "title": title,
@@ -321,7 +329,8 @@ Return as JSON with content_html containing the full article HTML."""
         }
 
     def save_post(self, post: dict) -> Path:
-        slug = post.get("slug", f"post-{random.randint(1000, 9999)}")
+        slug = self._normalize_slug(post.get("slug")) or f"post-{random.randint(1000, 9999)}"
+        post["slug"] = slug
         path = ROOT / "data" / "posts" / f"{slug}.json"
         with open(path, "w", encoding="utf-8") as f:
             json.dump(post, f, indent=2, ensure_ascii=False)
@@ -335,7 +344,8 @@ Return as JSON with content_html containing the full article HTML."""
         template = self._load_template()
 
         for post in posts:
-            slug = post.get("slug", "")
+            slug = self._normalize_slug(post.get("slug")) or f"post-{random.randint(1000, 9999)}"
+            post["slug"] = slug
             page = template
             page = page.replace("{{TITLE}}", post.get("title", ""))
             page = page.replace("{{META_DESC}}", post.get("meta_description", ""))
