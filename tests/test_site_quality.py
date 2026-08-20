@@ -54,6 +54,13 @@ class SiteQualityTests(unittest.TestCase):
         self.assertIn("DEEPSEEK_API_KEY", workflow)
         self.assertNotIn("ANTHROPIC_API_KEY", workflow)
 
+    def test_auto_content_workflow_serializes_runs(self):
+        workflow = (ROOT / ".github" / "workflows" / "auto-content.yml").read_text(encoding="utf-8")
+        self.assertIn(
+            "concurrency:\n  group: auto-content-engine\n  cancel-in-progress: false\n",
+            workflow,
+        )
+
     def test_save_post_sanitizes_path_separator_in_slug(self):
         settings_path = ROOT / "config" / "settings.json"
         post = {
