@@ -44,6 +44,7 @@ class SiteQualityTests(unittest.TestCase):
             env=env,
             capture_output=True,
             text=True,
+            encoding="cp936",
             timeout=30,
         )
         self.assertEqual(result.returncode, 0, result.stderr)

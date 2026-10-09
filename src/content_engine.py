@@ -53,7 +53,7 @@ class ContentEngine:
                 api_key=self.api_key,
                 base_url="https://api.deepseek.com"
             )
-            print(f"[OK] DeepSeek API connected (model: {self.model})")
+            print(f"[OK] DeepSeek API client configured (model: {self.model})")
 
         for sub in ["posts", "topics", "analytics"]:
             (ROOT / "data" / sub).mkdir(parents=True, exist_ok=True)
@@ -432,6 +432,19 @@ Return as JSON with content_html containing the full article HTML."""
         (ROOT / "site" / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {self.site_url}/sitemap.xml\n")
 
     def run_auto(self, category: str = None) -> list:
+        # Validate the API before any fallback content can be saved or published.
+        if not self.client:
+            raise RuntimeError("Automated generation requires DEEPSEEK_API_KEY and the openai package.")
+        try:
+            result = self._call_api("Reply with OK.", "API connectivity check", max_tokens=8)
+            if not result:
+                raise RuntimeError("Empty API response")
+        except Exception:
+            # Provider exceptions can contain parts of the key; do not echo them.
+            raise RuntimeError(
+                "DeepSeek API preflight failed. Check DEEPSEEK_API_KEY, account access, and API availability. "
+                "No content was generated."
+            ) from None
         print(f"\n{'='*60}\n🚀 AI Income Automation - Content Engine\n   API: DeepSeek ({self.model})\n   Time: {datetime.now().isoformat()}\n{'='*60}\n")
         categories = [category] if category else self.config["seo"]["categories"]
         all_posts = []
