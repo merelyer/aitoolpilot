@@ -50,9 +50,9 @@ class SiteQualityTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Environment Status", result.stdout)
 
-    def test_auto_content_workflow_uses_deepseek_secret_name(self):
+    def test_auto_content_workflow_uses_groq_secret_name(self):
         workflow = (ROOT / ".github" / "workflows" / "auto-content.yml").read_text(encoding="utf-8")
-        self.assertIn("DEEPSEEK_API_KEY", workflow)
+        self.assertIn("GROQ_API_KEY", workflow)
         self.assertNotIn("ANTHROPIC_API_KEY", workflow)
 
     def test_auto_content_workflow_serializes_runs(self):

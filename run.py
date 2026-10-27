@@ -2,18 +2,18 @@
 """
 AI Income Automation - Main Runner
 ===================================
-Fully automated DeepSeek-powered revenue engine.
+Fully automated Groq-powered revenue engine.
 
 This single script orchestrates:
-1. Content research & generation (via DeepSeek API)
+1. Content research & generation (via Groq API)
 2. Static site building with SEO optimization
 3. Deployment to free hosting (Cloudflare Pages)
 4. Scheduled recurring runs
 
 QUICK START:
-    export DEEPSEEK_API_KEY=sk-...
+    export GROQ_API_KEY=sk-...
     python run.py --once          # Generate & deploy once
-    python run.py --daemon        # Run continuously every N hours
+    python run.py --daemon        # Run continuously daily
     python run.py --schedule      # Set up as cron job
 
 REVENUE MODEL:
@@ -22,7 +22,7 @@ REVENUE MODEL:
     - Sponsored posts once domain authority builds
 
 COST STRUCTURE:
-    - DeepSeek API: low-cost per generated post
+    - Groq API: low-cost per generated post
     - Cloudflare Pages: Free tier
     - Domain (optional): ~$10/year
     - Total monthly cost with daily posts: ~$1-3
@@ -53,7 +53,7 @@ def check_environment() -> dict:
     """Check if the environment is properly set up."""
     status = {
         "python": True,
-        "deepseek_key": bool(os.environ.get("DEEPSEEK_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")),
+        "groq_key": bool(os.environ.get("GROQ_API_KEY")),
         "git": False,
         "node": False,
         "wrangler": False,
@@ -79,7 +79,7 @@ def print_banner():
 ║     ██║  ██║╚███╔███╔╝██║ ╚████║╚██████╗╚██████╔╝██║ ╚═╝ ██║███████╗
 ║     ╚═╝  ╚═╝ ╚══╝╚══╝ ╚═╝  ╚═══╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝
 ║                                                              ║
-║        🤖  Fully Automated DeepSeek-Powered Revenue Engine 🤖║
+║        🤖  Fully Automated Groq-Powered Revenue Engine 🤖║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
 """)
@@ -115,7 +115,7 @@ def setup_cron():
     script_path = ROOT / "run.py"
     python_path = sys.executable
 
-    cron_line = f"0 */8 * * * cd {ROOT} && {python_path} {script_path} --once >> {ROOT}/logs/cron.log 2>&1"
+    cron_line = f"15 1 * * * cd {ROOT} && {python_path} {script_path} --once >> {ROOT}/logs/cron.log 2>&1"
 
     print(f"""
 ╔══════════════════════════════════════════════════════════╗
@@ -126,12 +126,12 @@ def setup_cron():
 ║                                                          ║
 ║  {cron_line}
 ║                                                          ║
-║  This runs content generation every 8 hours.             ║
+║  This runs content generation once daily.             ║
 ║                                                          ║
 ║  On Windows (Task Scheduler):                            ║
 ║    schtasks /create /tn "AI-Income" /tr "cmd /c cd      ║
 ║    {ROOT} && {python_path} {script_path} --once"  ║
-║    /sc hourly /mo 8                                      ║
+║    /sc daily /st 09:15                                      ║
 ║                                                          ║
 ║  On macOS (launchd):                                     ║
 ║    Create ~/Library/LaunchAgents/com.ai.income.plist     ║
@@ -142,12 +142,12 @@ def setup_cron():
 
 def main():
     parser = argparse.ArgumentParser(
-        description="AI Income Automation - Fully automated DeepSeek-powered revenue engine",
+        description="AI Income Automation - Fully automated Groq-powered revenue engine",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   python run.py --once          Run one content generation cycle
-  python run.py --daemon        Run continuously (every N hours)
+  python run.py --daemon        Run continuously (daily)
   python run.py --deploy        Deploy site to Cloudflare Pages
   python run.py --schedule      Show cron setup instructions
   python run.py --once --deploy Generate, build, AND deploy
@@ -171,7 +171,7 @@ Examples:
         for k, v in status.items():
             icon = "✅" if v else "❌"
             print(f"  {icon} {k}: {v}")
-        print(f"\n💡 Set DEEPSEEK_API_KEY to enable DeepSeek content generation.")
+        print(f"\n💡 Set GROQ_API_KEY to enable Groq content generation.")
         print(f"💡 Install wrangler (npm i -g wrangler) for Cloudflare deployment.")
         return
 

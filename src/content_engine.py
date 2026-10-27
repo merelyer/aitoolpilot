@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
 AI Income Automation - Content Generation Engine
-Uses DeepSeek API to research, write, and optimize SEO content.
+Uses Groq API to research, write, and optimize SEO content.
 Fully automated — zero human touch required.
 
-DeepSeek: $0.14/$0.28 per MTok (5-10x cheaper than Claude)
-Compatible with OpenAI SDK, just change base_url.
+Uses the Groq free plan with a bounded daily schedule.
+Compatible with the OpenAI SDK; no alternate paid provider is configured.
 """
 
 import os
@@ -29,8 +29,12 @@ except ImportError:
     print("[WARN] Run: pip install openai")
 
 
+class GroqRateLimited(RuntimeError):
+    """The free API quota is temporarily unavailable."""
+
+
 class ContentEngine:
-    """Core content generation engine powered by DeepSeek."""
+    """Core content generation engine powered by Groq."""
 
     def __init__(self, config_path: Optional[Path] = None):
         if config_path is None:
@@ -45,15 +49,17 @@ class ContentEngine:
         self.max_tokens = self.config["claude"]["max_tokens_per_post"]
         self.temperature = self.config["claude"]["temperature"]
 
-        # Use DeepSeek API via OpenAI SDK
-        self.api_key = os.environ.get("DEEPSEEK_API_KEY", os.environ.get("ANTHROPIC_API_KEY", ""))
+        # Use Groq API via OpenAI SDK
+        self.api_key = os.environ.get("GROQ_API_KEY", "")
         self.client = None
         if self.api_key and HAS_API:
             self.client = OpenAI(
                 api_key=self.api_key,
-                base_url="https://api.deepseek.com"
+                base_url="https://api.groq.com/openai/v1",
+                max_retries=0,
+                timeout=60.0
             )
-            print(f"[OK] DeepSeek API client configured (model: {self.model})")
+            print(f"[OK] Groq API client configured (model: {self.model})")
 
         for sub in ["posts", "topics", "analytics"]:
             (ROOT / "data" / sub).mkdir(parents=True, exist_ok=True)
@@ -72,28 +78,37 @@ class ContentEngine:
         return html
 
     def _call_api(self, system_prompt: str, user_prompt: str, max_tokens: int = None, temperature: float = None) -> str:
-        """Call DeepSeek API with OpenAI-compatible format."""
+        """Call Groq API with OpenAI-compatible format."""
         if not self.client:
             return None
 
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            max_tokens=max_tokens or self.max_tokens,
-            temperature=temperature or self.temperature,
-        )
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                max_completion_tokens=max_tokens or self.max_tokens,
+                temperature=self.temperature if temperature is None else temperature,
+                reasoning_effort="low",
+            )
+        except Exception as error:
+            status = getattr(error, "status_code", None)
+            if status == 429:
+                raise GroqRateLimited("Groq quota reached; skipping remaining generation.") from None
+            raise RuntimeError(f"Groq API request failed (HTTP {status or 'unavailable'}).") from None
+        if response.choices[0].finish_reason == "length":
+            raise ValueError("Groq response exceeded the completion token limit.")
         return response.choices[0].message.content
 
     def research_topics(self, category: str) -> list:
-        """Research trending topics using DeepSeek."""
+        """Research trending topics using Groq."""
         if not self.client:
             return self._fallback_topics(category)
 
         prompt = f"""You are a content strategist for an AI tools review website.
-Research 5 trending, high-commercial-intent topics about "{category}" for 2025.
+Research 5 high-commercial-intent topics about "{category}" for {datetime.now(timezone.utc).year}. Do not claim live research or hands-on testing. Mark unverifiable pricing as requiring verification.
 
 Return ONLY a valid JSON array. Each item must have:
 - title: SEO-optimized title (50-65 chars)
@@ -118,8 +133,10 @@ Focus on comparison posts ("X vs Y"), pricing guides, and "best X" lists."""
                 topics = json.loads(text[start:end])
                 self._save_topics(category, topics)
                 return topics
+        except GroqRateLimited:
+            raise
         except Exception as e:
-            print(f"[ERROR] Research failed: {e}")
+            print(f"[WARN] Research failed ({type(e).__name__}); using topic suggestions.")
         return self._fallback_topics(category)
 
     def _fallback_topics(self, category: str) -> list:
@@ -174,12 +191,12 @@ Focus on comparison posts ("X vs Y"), pricing guides, and "best X" lists."""
             json.dump({"category": category, "date": datetime.now().isoformat(), "topics": topics}, f, indent=2)
 
     def generate_post(self, topic: dict, category: str) -> dict:
-        """Generate a full SEO-optimized blog post using DeepSeek."""
+        """Generate a full SEO-optimized blog post using Groq."""
         title = topic.get("title", "")
         keyword = topic.get("keyword", "")
 
         if not self.client:
-            return self._fallback_post(topic, category)
+            return None
 
         system_prompt = f"""You are a senior content writer for {self.site_name}, an AI tools review website.
 Your articles must be:
@@ -225,7 +242,7 @@ Return as JSON with content_html containing the full article HTML."""
         try:
             text = self._call_api(system_prompt, user_prompt, max_tokens=self.max_tokens)
             if not text:
-                return self._fallback_post(topic, category)
+                return None
 
             start = text.find("{")
             end = text.rfind("}") + 1
@@ -236,9 +253,11 @@ Return as JSON with content_html containing the full article HTML."""
                 post["model"] = self.model
                 post["topic"] = topic
                 return post
+        except GroqRateLimited:
+            raise
         except Exception as e:
-            print(f"[ERROR] Generation failed: {e}")
-        return self._fallback_post(topic, category)
+            print(f"[WARN] Article skipped ({type(e).__name__}); no template published.")
+        return None
 
     def _fallback_post(self, topic: dict, category: str) -> dict:
         title = topic.get("title", "Best AI Tools Comparison")
@@ -432,38 +451,48 @@ Return as JSON with content_html containing the full article HTML."""
         (ROOT / "site" / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {self.site_url}/sitemap.xml\n")
 
     def run_auto(self, category: str = None) -> list:
-        # Validate the API before any fallback content can be saved or published.
         if not self.client:
-            raise RuntimeError("Automated generation requires DEEPSEEK_API_KEY and the openai package.")
+            raise RuntimeError("Automated generation requires GROQ_API_KEY and the openai package.")
         try:
-            result = self._call_api("Reply with OK.", "API connectivity check", max_tokens=8)
+            result = self._call_api("Reply with OK.", "API connectivity check", max_tokens=512)
             if not result:
                 raise RuntimeError("Empty API response")
-        except Exception:
-            # Provider exceptions can contain parts of the key; do not echo them.
+        except GroqRateLimited:
+            print("[WARN] Groq quota reached. No content generated; no paid fallback.")
+            return []
+        except Exception as error:
             raise RuntimeError(
-                "DeepSeek API preflight failed. Check DEEPSEEK_API_KEY, account access, and API availability. "
-                "No content was generated."
+                "Groq API preflight failed. Check GROQ_API_KEY and account/model access. "
+                f"Failure type: {type(error).__name__}. No content was generated."
             ) from None
-        print(f"\n{'='*60}\n🚀 AI Income Automation - Content Engine\n   API: DeepSeek ({self.model})\n   Time: {datetime.now().isoformat()}\n{'='*60}\n")
-        categories = [category] if category else self.config["seo"]["categories"]
+        categories = [category] if category else list(self.config["seo"]["categories"])
+        if categories and not category:
+            offset = datetime.now(timezone.utc).date().toordinal() % len(categories)
+            categories = categories[offset:] + categories[:offset]
+        limit = min(5, self.config.get("site", {}).get("max_posts_per_run", 5))
+        attempts = 0
         all_posts = []
-        for cat in categories:
-            print(f"📊 Researching: {cat}")
-            topics = self.research_topics(cat)
-            print(f"   Found {len(topics)} topics")
-            for i, topic in enumerate(topics[:self.config["site"]["posts_per_run"]]):
-                print(f"\n✍️  Post {i+1}/{min(len(topics), self.config['site']['posts_per_run'])}: {topic.get('title','')[:80]}...")
-                post = self.generate_post(topic, cat)
-                if post:
-                    self.save_post(post)
-                    all_posts.append(post)
-                time.sleep(1)
+        print(f"[OK] Groq API ready: {self.model}; at most {limit} articles this run.")
+        try:
+            for cat in categories:
+                if attempts >= limit:
+                    break
+                topics = self.research_topics(cat)
+                for topic in topics[:self.config["site"]["posts_per_run"]]:
+                    if attempts >= limit:
+                        break
+                    attempts += 1
+                    post = self.generate_post(topic, cat)
+                    if post:
+                        self.save_post(post)
+                        all_posts.append(post)
+                    # Keep long completions below the free tier's per-minute token limit.
+                    time.sleep(65)
+        except GroqRateLimited:
+            print("[WARN] Groq quota reached; stopping generation with no paid fallback.")
         if all_posts:
-            print(f"\n🏗️  Building site with {len(all_posts)} posts...")
-            path = self.build_site(all_posts)
-            print(f"✅ Site built: {path}")
-        print(f"\n✅ Done! {len(all_posts)} posts generated.")
+            self.build_site(all_posts)
+        print(f"[OK] Done: {len(all_posts)} Groq articles generated.")
         return all_posts
 
 

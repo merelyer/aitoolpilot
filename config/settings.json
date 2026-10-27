@@ -11,14 +11,15 @@
     "url": "https://merelyer.github.io/aitoolpilot",
     "base_path": "/aitoolpilot",
     "language": "en",
-    "posts_per_run": 3,
-    "max_posts_total": 500
+    "posts_per_run": 1,
+    "max_posts_total": 500,
+    "max_posts_per_run": 5
   },
   "claude": {
-    "model": "deepseek-chat",
-    "max_tokens_per_post": 4000,
+    "model": "openai/gpt-oss-120b",
+    "max_tokens_per_post": 5000,
     "temperature": 0.7,
-    "max_cost_per_run_usd": 0.10
+    "max_cost_per_run_usd": 0.1
   },
   "affiliate": {
     "programs": [
@@ -55,14 +56,22 @@
     ]
   },
   "schedule": {
-    "frequency_hours": 8,
+    "frequency_hours": 24,
     "publish_time_utc": "09:00",
     "social_auto_post": true
   },
   "monetization": {
     "primary": "affiliate",
-    "secondary": ["adsense", "sponsored_posts"],
-    "affiliate_networks": ["partnerstack", "impact", "shareasale", "cj"],
+    "secondary": [
+      "adsense",
+      "sponsored_posts"
+    ],
+    "affiliate_networks": [
+      "partnerstack",
+      "impact",
+      "shareasale",
+      "cj"
+    ],
     "ad_network": "adsense"
   }
 }
