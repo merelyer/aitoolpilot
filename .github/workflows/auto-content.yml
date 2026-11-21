@@ -22,9 +22,7 @@ jobs:
         with: { python-version: '3.11' }
       - run: pip install -r requirements.txt
       - name: Run regression tests
-        run: |
-          python -m unittest discover -s tests
-          node --test tests/test_pages_artifact.cjs
+        run: python -m unittest discover -s tests
       - run: python run.py --once
       - run: |
           git config user.name "AI Bot"
@@ -35,10 +33,22 @@ jobs:
       - uses: actions/configure-pages@v4
       - uses: actions/upload-pages-artifact@v3
         with: { path: 'site' }
-      - name: Wait for Pages artifact metadata
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const waitForPagesArtifact = require('./.github/scripts/wait-for-pages-artifact.cjs');
-            await waitForPagesArtifact({github, context, core});
-      - uses: actions/deploy-pages@v4
+
+  deploy:
+    needs: generate
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - name: Wait before retrying deployment
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 30
+      - name: Retry GitHub Pages deployment
+        id: deployment_retry
+        if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v4
